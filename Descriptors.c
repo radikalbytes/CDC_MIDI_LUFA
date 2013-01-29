@@ -43,11 +43,22 @@
  *  number of device configurations. The descriptor is read out by the USB host when the enumeration
  *  process begins.
  */
+
+ /* Para combinar la clase CDC, que requiere multiples interfaces juntos en un unico USB Configuration
+ *  Descriptor, necesitamos agrupar logicamente esos interfaces en una unica instancia en lugar de dos
+ *  instancias del driver separadas.
+ *  Incluiremos Unos descriptores extras de tipo Interface Association Descriptors (IAD) para indicar 
+ *  al host que estan agrupados en una unica instancia y así un unico driver CDC pueda manejar los
+ *  notification endpoint y data endpoint
+ */ 
 const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 {
 	.Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
 
 	.USBSpecification       = VERSION_BCD(01.10),
+	//
+	// Aqui definimos los valores de las clases, subclases y protocolo IAD
+	//
 	.Class                  = USB_CSCP_IADDeviceClass,
 	.SubClass               = USB_CSCP_IADDeviceSubclass,
 	.Protocol               = USB_CSCP_IADDeviceProtocol,
@@ -77,7 +88,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 			.Header                 = {.Size = sizeof(USB_Descriptor_Configuration_Header_t), .Type = DTYPE_Configuration},
 
 			.TotalConfigurationSize = sizeof(USB_Descriptor_Configuration_t),
-			.TotalInterfaces        = 4,
+			.TotalInterfaces        = 4,   // 4 Interfaces en total (2 CDC y 2 MIDI)
 
 			.ConfigurationNumber    = 1,
 			.ConfigurationStrIndex  = NO_DESCRIPTOR,
@@ -93,7 +104,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 
 			.FirstInterfaceIndex    = 0,
 			.TotalInterfaces        = 2,
-
+			// Y aqui estan los valores de la clase, subclase y protocolo CDC_CSCP indicados en el IAD
 			.Class                  = CDC_CSCP_CDCClass,
 			.SubClass               = CDC_CSCP_ACMSubclass,
 			.Protocol               = CDC_CSCP_ATCommandProtocol,

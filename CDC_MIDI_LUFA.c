@@ -103,27 +103,37 @@ int main(void)
 	/* Initialization */
 	SetupHardware();
 	wdt_reset();
-	GlobalInterruptEnable();
+	GlobalInterruptEnable();	
 
 	/* Endless loop */
 	for(;;)
 	{
+		//Leer dato del CDC_serial_USB
         int16_t data1 = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-        USB_MIDI_Send_Command(0, 0x80, 55, 0);
-   		CDC_Device_SendString(&VirtualSerial_CDC_Interface,"Note Off \r\n");
-
-        _delay_ms(200);
-        USB_MIDI_Send_Command(0, 0x90, 55, 0);
-   		CDC_Device_SendString(&VirtualSerial_CDC_Interface,"Note On \r\n");
-
-        _delay_ms(200);
-
 
         if(!(data1<0))
         {
+        	// Leer dato del CDC_serial y enviar nota con ese dato como frecuencia por MIDI
+
+        	// Escribir el dato
         	CDC_Device_SendByte(&VirtualSerial_CDC_Interface,(uint8_t)data1);
+        	CDC_Device_SendString(&VirtualSerial_CDC_Interface,"\r\n");
+        	//Led MIDI on
+        	MIDI_LED_ON();
+        	// Envia texto y nota de 200ms
+   			CDC_Device_SendString(&VirtualSerial_CDC_Interface,"Note On \r\n");
+            USB_MIDI_Send_Command(0, 0x90, (uint8_t)data1, 120);
+        	_delay_ms(200);
+        	// NoteOff y apaga led MIDI
+        	USB_MIDI_Send_Command(0, 0x80, 60, 0);
+        	MIDI_LED_OFF();
+   			CDC_Device_SendString(&VirtualSerial_CDC_Interface,"Note Off \r\n");
+
         }
+
+		//Tarea USB CDC Serial
 		CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+		//Tarea USB MIDI
 		MIDI_Device_USBTask(&MIDI_Interface);
 
 		USB_USBTask();	
@@ -182,6 +192,7 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 {
 	bool ConfigSuccess = true;
 	uint8_t ff;
+	
 	ConfigSuccess &= CDC_Device_ConfigureEndpoints(&VirtualSerial_CDC_Interface);
 	ConfigSuccess &= MIDI_Device_ConfigureEndpoints(&MIDI_Interface);
 
